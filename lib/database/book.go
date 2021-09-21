@@ -3,17 +3,12 @@ package Database
 import (
 	"Book_CRUD/config"
 	Models "Book_CRUD/models"
-	"github.com/labstack/echo/v4"
 )
 
-func PostBook(ctx echo.Context)(interface{},error){
-	var book Models.Books
-	ctx.Bind(&book)
-
-	if err := config.DB.Save(&book).Error; err != nil{
+func PostBook(book *Models.Books)(*Models.Books,error){
+	if err := config.DB.Create(&book).Error; err != nil{
 		return nil,err
 	}
-
 	return  book,nil
 }
 
@@ -27,8 +22,8 @@ func GetBooks()(interface{},error){
 	return books,nil
 }
 
-func GetBookById(id int)(interface{},error){
-	var book Models.Books
+func GetBookById(id int)(*Models.Books,error){
+	var book *Models.Books
 
 	if err := config.DB.Where("id = ?",id).First(&book).Error; err != nil{
 		return nil,err
@@ -37,17 +32,17 @@ func GetBookById(id int)(interface{},error){
 	return book,nil
 }
 
-func PutBookById(id int,book Models.Books)(interface{},error){
+func PutBookById(id int,book *Models.Books)(*Models.Books,error){
 	if err := config.DB.Where("id = ?",id).Updates(&book).Error; err != nil{
 		return nil,err
 	}
 	return book,nil
 }
 
-func DeleteBookById(id int)(interface{},error){
-	var book Models.Books
+func DeleteBookById(id int)(*Models.Books,error){
+	var book *Models.Books
 
-	if err := config.DB.Where("id = ?",id).Delete(&book).Error; err != nil{
+	if err := config.DB.Delete(&book,id).Error; err != nil{
 		return nil,err
 	}
 	return book,nil

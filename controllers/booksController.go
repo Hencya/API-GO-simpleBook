@@ -2,21 +2,30 @@ package Controller
 
 import (
 	Database "Book_CRUD/lib/database"
-	Models "Book_CRUD/models"
+	"errors"
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"strconv"
 )
 
-func CreateBookController(ctx echo.Context)error{
-	books,err := Database.PostBook(ctx)
-	if err != nil{
+func CreateBookController(ctx echo.Context)(err error){
+	newBook := new(PostBookRequest)
+
+	if err = ctx.Bind(newBook); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest,err.Error())
+	}
+
+	result,errPost := Database.PostBook(PostBookRequestToModelRequest(newBook))
+
+	if errPost != nil{
+		fmt.Println("Masuk disini")
 		return echo.NewHTTPError(http.StatusBadRequest,err.Error())
 	}
 
 	return ctx.JSON(http.StatusOK,map[string]interface{}{
 		"Message": "success create new book",
-		"Data": books,
+		"Data": ModelToBookDetailResponse(result),
 	})
 }
 
@@ -36,32 +45,35 @@ func GetAllBooksController(ctx echo.Context)error{
 func GetBookByIdController(ctx echo.Context)error{
 	id,err := strconv.Atoi(ctx.Param("id"))
 
-	if err != nil {
-		return echo.NewHTTPError(http.StatusNotFound,err.Error())
+	if err != nil{
+		return echo.NewHTTPError(http.StatusBadRequest,err.Error())
 	}
 
 	book,errGet := Database.GetBookById(id)
 
-	if errGet != nil{
-		return echo.NewHTTPError(http.StatusInternalServerError,errGet.Error())
+	if errGet != nil {
+		return echo.NewHTTPError(http.StatusNotFound,errors.New("Not Found Book"))
 	}
 
 	return ctx.JSON(http.StatusOK,map[string]interface{}{
 		"message": "success get all books",
-		"data": book,
+		"data": ModelToBookDetailResponse(book),
 	})
 }
 
-func EditBookByIdController(ctx echo.Context)error{
-	id,err := strconv.Atoi(ctx.Param("id"))
+func EditBookByIdController(ctx echo.Context) (err error){
+	id,errConvert := strconv.Atoi(ctx.Param("id"))
 
-	if err != nil {
-		return echo.NewHTTPError(http.StatusNotFound,err.Error())
+	if errConvert != nil {
+		return echo.NewHTTPError(http.StatusBadRequest,errConvert.Error())
 	}
 
-	var book Models.Books
-	ctx.Bind(&book)
-	result,errUpdate := Database.PutBookById(id,book)
+	updateBook := new(PutBookRequest)
+	if err = ctx.Bind(updateBook); err!= nil{
+		return echo.NewHTTPError(http.StatusBadRequest,err.Error())
+	}
+
+	result,errUpdate := Database.PutBookById(id,PutBookRequestToModelRequest(updateBook))
 
 	if errUpdate != nil{
 		return echo.NewHTTPError(http.StatusInternalServerError,errUpdate.Error())
@@ -69,7 +81,7 @@ func EditBookByIdController(ctx echo.Context)error{
 
 	return ctx.JSON(http.StatusOK,map[string]interface{}{
 		"message": "success get all books",
-		"data": result,
+		"data": ModelToBookDetailResponse(result),
 	})
 }
 
@@ -77,13 +89,13 @@ func DeleteBookByIdController(ctx echo.Context)error{
 	id,err := strconv.Atoi(ctx.Param("id"))
 
 	if err != nil {
-		return echo.NewHTTPError(http.StatusNotFound,err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest,err.Error())
 	}
 
 	_,errDelete := Database.DeleteBookById(id)
 
 	if errDelete != nil{
-		return echo.NewHTTPError(http.StatusInternalServerError,err.Error())
+		return echo.NewHTTPError(http.StatusNotFound,err.Error())
 	}
 
 	return ctx.JSON(http.StatusOK,map[string]interface{}{
